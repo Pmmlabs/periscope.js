@@ -2109,7 +2109,7 @@ function getURL(id, callback){
     var getURLCallback =function (r) {
         var date_created = new Date(r.broadcast.start);
         var date_created_str = date_created.getFullYear() + '-' + zeros(date_created.getMonth() + 1) + '-' + zeros(date_created.getDate()) + '_' + zeros(date_created.getHours()) + '.' + zeros(date_created.getMinutes());
-        var name = cleanFilename(date_created_str + '_' + r.broadcast.user_display_name + '_'+r.broadcast.status);
+        var name = cleanFilename(date_created_str + '_' + r.broadcast.user_display_name + '_(' + r.broadcast.username + '_' + r.broadcast.user_id + ')_'+r.broadcast.status);
         // For live
         var hls_url = r.hls_url || r.https_hls_url || r.lhls_url;
         if (hls_url) {
