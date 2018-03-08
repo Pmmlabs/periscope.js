@@ -23,10 +23,18 @@
 // @updateURL   https://github.com/Pmmlabs/OpenPeriscope/raw/master/Periscope_Web_Client.meta.js
 // @icon        https://github.com/Pmmlabs/OpenPeriscope/raw/master/images/openperiscope.png
 // @noframes
+// @grant       GM.xmlHttpRequest
+// @grant       GM.getResourceUrl
+// @resource    CSS style.css
 // ==/UserScript==
 
 var emoji = new EmojiConvertor();
-NODEJS = typeof GM_xmlhttpRequest == 'undefined';
+if (typeof GM_xmlhttpRequest === 'undefined' && typeof GM !== 'undefined') {
+    // Greasemonkey 4+
+    GM_xmlhttpRequest = GM.xmlHttpRequest;
+    GM_getResourceUrl = GM.getResourceUrl;
+}
+NODEJS = typeof GM_xmlhttpRequest === 'undefined';
 var IMG_PATH = 'https://raw.githubusercontent.com/Pmmlabs/OpenPeriscope/master';
 var settings = JSON.parse(localStorage.getItem('settings')) || {};
 if (NODEJS) {  // for NW.js
@@ -88,499 +96,19 @@ if (NODEJS) {  // for NW.js
         })
     }, 1000);
 }
-//<editor-fold desc="CSS style">
-const css = '<style>\
-    @media (max-width: 640px) {\
-        div#left {\
-            width: 0;\
-        }\
-        div#right {\
-            margin-left: 20px;\
-        }\
-        div#left:hover {\
-            width: 200px;\
-        }\
-        div#left:hover + div {\
-            margin-left: 220px;\
-        }\
-    }\
-    @media (max-width: 800px) {\
-        div#userlist {\
-            width: 0;\
-        }\
-        div#userlist:hover {\
-            width: 200px;\
-        }\
-    }\
-    @font-face {\
-        font-family: "Roboto";\
-        font-style: normal;\
-        font-weight: 400;\
-        src: local("Roboto"), local("Roboto-Regular"), url(' + IMG_PATH + '/fonts/Roboto-latin.woff2) format("woff2");\
-        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;\
-    }\
-    @font-face {\
-        font-family: "Roboto";\
-        font-style: normal;\
-        font-weight: 400;\
-        src: local("Roboto"), local("Roboto-Regular"), url(' + IMG_PATH + '/fonts/Roboto-cyrillic.woff2) format("woff2");\
-        unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;\
-    }\
-    html, body, #left, #Map, #Chat, #map {\
-        height: 100%;\
-    }\
-    body {\
-        margin: 0;\
-        font-family: "Roboto", sans-serif;\
-        background: #fdfdfd;\
-    }\
-    body > div {\
-        padding: 10px;\
-    }\
-    #secret, body > a {\
-        margin: 10px;\
-    }\
-    body > input[type="text"] {\
-        margin-left: 10px;\
-    }\
-    a, .edit {\
-        color: #039be5;\
-        text-decoration: none;\
-        cursor: pointer;\
-    }\
-    input[type="text"], textarea {\
-        border: none;\
-        border-bottom: 1px solid #9e9e9e;\
-        border-radius: 0;\
-        outline: none;\
-        height: 2rem;\
-        margin: 0 10px 9px 0;\
-        transition: box-shadow .3s;\
-        background: transparent;\
-    }\
-    input[type="text"] {\
-        font-size: 1rem;\
-    }\
-    textarea {\
-        width: 500px;\
-        height: 100px;\
-        border-left: 1px solid transparent;\
-        border-top: 1px solid transparent;\
-        border-right: 1px solid transparent;\
-    }\
-    textarea:focus {\
-        border-color: #E0E0E0;\
-    }\
-    input[type="text"]:focus, textarea:focus {\
-        border-bottom: 1px solid #26a69a;\
-        box-shadow: 0 1px 0 0 #26a69a;\
-    }\
-    #secret {\
-        font-size:1.5em;\
-        display: block;\
-    }\
-    .button {\
-        border-radius: 2px;\
-        line-height: 36px;\
-        outline: 0px none;\
-        padding: 0px 2rem;\
-        text-transform: uppercase;\
-        color: #FFF;\
-        background-color: #26A69A;\
-        letter-spacing: 0.5px;\
-        cursor: pointer;\
-        display: inline-block;\
-        vertical-align: middle;\
-        will-change: opacity, transform;\
-        transition: all 0.3s ease-out 0s;\
-        margin-right: 10px;\
-        height: 36px;\
-        overflow: hidden;\
-    }\
-    .button, .card, .contextmenu, .searcher {\
-        box-shadow: 0px 2px 5px 0px rgba(0, 0, 0, 0.16), 0px 2px 10px 0px rgba(0, 0, 0, 0.12);\
-    }\
-    .button:hover {\
-        background-color: #2bbbad;\
-    }\
-    .menu {\
-        cursor: pointer;\
-        transition: all 0.25s ease 0s;\
-        color: #26A69A;\
-        line-height: 1.5rem;\
-        height: 1.5rem;\
-        padding: 10px 20px;\
-        margin: 0px;\
-        border-bottom: 1px solid #E0E0E0;\
-    }\
-    .menu.active {\
-        background-color: #26A69A;\
-        color: #EAFAF9;\
-    }\
-    .menu:hover:not(.active), .contextmenu div:hover {\
-        background-color: #f0f0f0;\
-    }\
-    #progress {\
-        position: fixed;\
-        top: 0;\
-        left: 0;\
-        width: 0;\
-        z-index: 1;\
-        padding: 0;\
-        height: 2px;\
-        background: #77b7ff;\
-        box-shadow: 0 0 10px rgba(119,183,255,0.7);\
-        -webkit-transition: width 10s ease;\
-        transition: width 10s ease;\
-    }\
-    #left > a, #left > img {\
-        margin-bottom: 5px;\
-    }\
-    #left > label {\
-        display: block;\
-        margin-bottom: 20px;\
-    }\
-    #left {\
-        position: fixed;\
-        box-shadow: 0px 2px 5px 0px rgba(0, 0, 0, 0.16), 0px 2px 10px 0px rgba(0, 0, 0, 0.12);\
-        overflow: auto;\
-        width: 200px;\
-        transition: width 0.2s ease-out;\
-    }\
-    #right {\
-        width: auto;\
-        height: 95%;\
-        margin-left: 220px;\
-        transition: margin-left 0.2s ease-out;\
-    }\
-    .username, .leaflet-container a.username {\
-        color: grey;\
-        font-weight: bold;\
-        max-height: 1.5em;\
-        overflow: hidden;\
-        text-overflow: ellipsis;\
-        cursor: pointer;\
-    }\
-    #Map, #Chat, #map {\
-        width:100%;\
-    }\
-    .live-cluster-small div{\
-        background-color: rgba(222, 0, 0, 0.6);\
-    }\
-    .live-cluster-medium div {\
-        background-color: rgba(180, 0, 0, 0.7);\
-    }\
-    .live-cluster-large div {\
-        background-color: rgba(150, 0, 0, 0.9);\
-    }\
-    .replay-cluster-small div {\
-        background-color: rgba(59, 51, 227, 0.6);\
-    }\
-    .replay-cluster-medium div {\
-        background-color: rgba(43, 38, 174, 0.7);\
-    }\
-    .replay-cluster-large div {\
-        background-color: rgba(33, 29, 128, 0.9);\
-    }\
-    .marker-cluster {\
-        background-clip: padding-box;\
-        border-radius: 20px;\
-        background-color: white; \
-    }\
-    .marker-cluster div {\
-        width: 36px;\
-        height: 36px;\
-        margin-left: 2px;\
-        margin-top: 2px;\
-        text-align: center;\
-        border-radius: 18px;\
-        font: 12px "Helvetica Neue", Arial, Helvetica, sans-serif;\
-    }\
-    .marker-cluster span {\
-        line-height: 36px;\
-        color: white;\
-        font-weight: bold;\
-    }\
-    .leaflet-popup-content .description {\
-        min-height: 128px;\
-    }\
-    .leaflet-popup-content {\
-        width: 350px !important;\
-    }\
-    .description a {\
-        font-weight: bold;\
-    }\
-    .description img {\
-        float: left;\
-        margin-right: 10px;\
-    }\
-    .icon {\
-        padding-left: 25px;\
-        background-repeat: no-repeat;\
-        background-position: 5px center;\
-    }\
-    .chatlink {\
-        background-image: url("' + IMG_PATH + '/images/comment-black.png");\
-    }\
-    .watching {\
-        background-image: url("' + IMG_PATH + '/images/user-black.png");\
-    }\
-    .hearts {\
-        background-image: url("' + IMG_PATH + '/images/heart-black.png");\
-    }\
-    .delete {\
-        background-image: url("' + IMG_PATH + '/images/delete-black.png");\
-        height: 14px;\
-    }\
-    .screenlist {\
-        background-image: url("' + IMG_PATH + '/images/camera-black.png");\
-        height: 14px;\
-    }\
-    .date {\
-        background-image: url("' + IMG_PATH + '/images/calendar-black.png");\
-    }\
-    .time {\
-        background-image: url("' + IMG_PATH + '/images/clock-black.png");\
-    }\
-     .friend_chat {\
-        background-image: url("' + IMG_PATH + '/images/eye-black.png");\
-    }\
-    .is_locked {\
-        background-image: url("' + IMG_PATH + '/images/lock-black.png");\
-    }\
-    .edit {\
-        background-image: url("' + IMG_PATH + '/images/edit-black.png");\
-    }\
-    .lives {\
-        background-image: url("' + IMG_PATH + '/images/video-black.png");\
-    }\
-    dt {\
-        min-width: 150px;\
-        float: left;\
-        padding-top: 0.5rem;\
-    }\
-    #ApiTest input {\
-        width: 500px;\
-    }\
-    pre {\
-        background-color: #f0f0f0;\
-        padding: 7px;\
-        white-space: pre-wrap;\
-        word-wrap: break-word;\
-    }\
-    .card {\
-        font: 14px/1.3 "Helvetica Neue",Arial,Helvetica,sans-serif;\
-        min-height: 128px;\
-        margin: 0.5rem 0 1rem 0;\
-        background-color: #fff;\
-        border-radius: 2px;\
-        min-width: 350px;\
-    }\
-    .card .description {\
-        padding-top: 10px;\
-        padding-right: 10px;\
-    }\
-    .card.RUNNING img {\
-        border-color: #ED4D4D;;\
-    }\
-    .card.ENDED img {\
-        border-color: #4350E9;\
-    }\
-    .card img {\
-        height: 128px;\
-        border-right: 5px solid;\
-        margin-top: -10px;\
-        min-width: 72px;\
-    }\
-    /* CHAT */\
-    #userlist {\
-        float: right;\
-        width: 250px;\
-        transition: width 0.2s ease-out;\
-    }\
-    #chat {\
-        word-break: break-all;\
-    }\
-    #chat, #userlist {\
-        border: 1px solid #bcbcbc;\
-        height: 84%;\
-        padding: 5px;\
-        overflow-y: auto;\
-    }\
-    #resultConsole {\
-        overflow-y: auto;\
-        height: 300px; \
-    }\
-    .user {\
-        white-space: nowrap;\
-    }\
-    #chat .user {\
-        color: #2927cc;\
-        cursor: pointer;\
-    }\
-    #userlist .user {\
-        cursor: default;\
-    }\
-    .user div {\
-        display: inline;\
-    }\
-    #title {\
-        font-size: 16px;\
-    }\
-    #presence {\
-        text-align: right;\
-    }\
-    #sendLike {\
-        -webkit-touch-callout: none;\
-        -webkit-user-select: none;\
-        -khtml-user-select: none;\
-        -moz-user-select: none;\
-        -ms-user-select: none;\
-        user-select: none;\
-    }\
-    #underchat {\
-        padding-top: 5px;\
-    }\
-    #underchat label {\
-        margin-top: 0.5em;\
-    }\
-    #underchat div {\
-        margin-right: 310px;\
-    }\
-    #message {\
-        width: 100%;\
-    }\
-    .service {\
-        color: green;\
-    }\
-    .error {\
-        color: red;\
-    }\
-    /* EMOJI */\
-    span.emoji {\
-        display: inline-block;\
-        width: 1.5em;\
-        height: 1.5em;\
-        background-size: contain;\
-    }\
-    span.emoji-sizer {\
-        margin: -2px 0;\
-    }\
-    span.emoji-outer {\
-        display: inline-block;\
-        height: 1.5em;\
-        width: 1.5em;\
-    }\
-    span.emoji-inner {\
-        display: inline-block;\
-        width: 100%;\
-        height: 100%;\
-        vertical-align: baseline;\
-    }\
-    img.emoji {\
-        width: 1.5em;\
-        height: 1.5em;\
-    }\
-    /* USER */\
-    img.avatar {\
-        border: none;\
-        background: url("' + IMG_PATH + '/images/default_avatar.png");\
-    }\
-    #People .username {\
-        font-size: 17px;\
-    }\
-    #followers {\
-        width: 50%;\
-        float: right;\
-    }\
-    #following {\
-        width: 48%;\
-        float: left;\
-    }\
-    .twitterlink:hover g, .periscopelink:hover .tofill {\
-        fill: #59adeb;\
-    }\
-    .featured {\
-        padding: 3px;\
-        margin-left: 10px;\
-        border-radius: 3px;\
-        color: white;\
-    }\
-    .card .userdescription {\
-        overflow: hidden;\
-        max-height: 2.8em;\
-        text-overflow: ellipsis;\
-    }\
-    .right {\
-        float: right;\
-    }\
-    .contextmenu {\
-        position: absolute;\
-        padding: 0;\
-        background: white;\
-    }\
-    .contextmenu div {\
-        padding: 5px;\
-        cursor: pointer;\
-    }\
-    .spoiler-content-visible {\
-        padding: 5px;\
-        background: #fbfbfb;\
-        height: auto !important;\
-    }\
-    /* Split.js */\
-    .gutter {\
-        background-color: #eee;\
-        background-repeat: no-repeat;\
-        background-position: 50%;\
-    }\
-    .gutter.gutter-horizontal {\
-        background-image: url("' + IMG_PATH + '/images/vertical.png");\
-        cursor: ew-resize;\
-    }\
-    .split, .gutter.gutter-horizontal {\
-        height: 100%;\
-        float: left;\
-    }\
-    .split {\
-        -webkit-box-sizing: border-box;\
-        -moz-box-sizing: border-box;\
-        box-sizing: border-box;\
-        overflow-y: auto;\
-        overflow-x: hidden;\
-    }\
-    img.lock {\
-        height: 14px;\
-        width: 14px;\
-        margin-left: -30px;\
-        min-width: 14px;\
-        margin-top: 100px;\
-        border: none;\
-    }\
-    .bullets {\
-        background-image: url("' + IMG_PATH + '/images/bullets-black.png");\
-        width: 14px;\
-        height: 14px;\
-        display: block;\
-        margin: 11px;\
-    }\
-    .searcher {\
-        background: white;\
-        padding: 0 10px;\
-    }\
-    .searcher input, .searcher input:focus {\
-        border: none;\
-        box-shadow: none;\
-        margin: 0;\
-    }\
-</style>';
-//</editor-fold>
 
 if (location.href == 'https://api.twitter.com/oauth/authorize') {
     location.href = $('meta[http-equiv="refresh"]').attr('content').substr(6).replace('twittersdk://openperiscope/index.html', 'http://example.net/');
 } else {
     $('style').remove();
-    $(document.head).append(css).append('<meta name="referrer" content="no-referrer" />');
+    $(document.head).append('<meta name="referrer" content="no-referrer" />');
+    if (NODEJS) {
+        $(document.head).append('<link rel="stylesheet" href="/style.css" />')
+    } else {
+        GM_getResourceUrl("CSS").then(function(cssBlobUrl){
+            $(document.head).append('<link rel="stylesheet" href="'+cssBlobUrl+'" />')
+        });
+    }
 
     document.title = 'OpenPeriscope';
     var oauth_token = localStorage.getItem('oauth_token'),
@@ -2239,6 +1767,10 @@ function getDescription(stream) {
     var duration = stream.end || stream.timedout ? new Date(new Date(stream.end || stream.timedout) - date_created) : 0;
     var userLink = $('<a class="username">' + emoji.replace_unified(stream.user_display_name) + ' (@' + stream.username + ')</a>');
     userLink.click(switchSection.bind(null, 'User', stream.user_id));
+    if (stream.share_display_names) {
+        var sharedByLink = $('<a class="sharedByUsername">'+ emoji.replace_unified(stream.share_display_names[0]) + '</a>')
+            .click(switchSection.bind(null, 'User', stream.share_user_ids[0]));
+    }
     if (stream.user_id == loginTwitter.user.id)
         var deleteLink = $('<a class="delete right icon" title="Delete"/>').click(function () {
             Api('deleteBroadcast', {broadcast_id: stream.id}, function (resp) {
@@ -2258,13 +1790,20 @@ function getDescription(stream) {
             window.open('data:text/html;charset=utf-8,'+encodeURIComponent(html));
         });
     });
+    var getFlag = function (country) {
+        if (country === "en") country = "us";//no emoji flag for en :'(
+        var flagOffset = 127365;
+        var both = String.fromCodePoint(country.codePointAt(0) + flagOffset) + String.fromCodePoint(country.codePointAt(1) + flagOffset);
+        var output = emoji.replace_unified(both);
+        return (output === both) ? country : output;
+    };
     var chatLink = $('<a class="chatlink right icon">Chat</a>').click(switchSection.bind(null, 'Chat', stream.id));
     var description = $('<div class="description">\
-                <a href="' + stream.image_url + '" target="_blank"><img lazysrc="' + stream.image_url_small + '"/>' + (stream.is_locked ? '<img src="' + IMG_PATH + '/images/lock-white.png" class="lock"/>' : '') + '</a>\
+                <a href="' + stream.image_url + '" target="_blank"><img lazysrc="' + stream.image_url_small + '"/>' + (stream.is_locked ? '<img src="' + IMG_PATH + '/images/lock-white.png" class="lock"/>' : '') + ((stream.broadcast_source === 'producer' || stream.broadcast_source === 'livecms') ? '<span class="sProducer">Producer</span>': '') + '</a>\
                 <div class="watching right icon" title="Watching">' + (stream.n_watching || stream.n_web_watching || stream.n_total_watching || stream.n_total_watched || 0) + '</div>\
                 <a target="_blank" href="https://www.periscope.tv/w/' + stream.id + '">' + title + '</a>'+featured_reason+'\
             </div>')
-        .append(deleteLink, '<br/>', screenlistLink, userLink, (stream.share_display_names ? ', shared by ' + stream.share_display_names[0] : ''), (stream.channel_name ? ', on channel ' + stream.channel_name : ''), '<br/>', chatLink,
+        .append(deleteLink, '<br/>', screenlistLink, userLink, (sharedByLink ? [', shared by ', sharedByLink] : ''), (stream.channel_name ? ', on: ' + emoji.replace_unified(stream.channel_name) : ''), '<br/>', chatLink, '<br/>', ('<span class="lang right" title="Language ' + stream.language + '">' + getFlag(stream.language) + '</span>'),
             '<span class="date icon" title="Created">' + zeros(date_created.getDate()) + '.' + zeros(date_created.getMonth() + 1) + '.' + date_created.getFullYear() + ' ' + zeros(date_created.getHours()) + ':' + zeros(date_created.getMinutes()) + '</span>'
             + (duration ? '<span class="time icon" title="Duration">' + zeros(duration.getUTCHours()) + ':' + zeros(duration.getMinutes()) + ':' + zeros(duration.getSeconds()) + '</span>' : '')
             + (stream.friend_chat ? '<span class="friend_chat" title="Chat only for friends"/>' : '')
@@ -2286,13 +1825,20 @@ function getUserDescription(user) {
         .append($('<div class="username">' + verified_icon + emoji.replace_unified(user.display_name) + ' (@' + user.username + ')</div>').click(switchSection.bind(null, 'User', user.id)))
         .append('Created: ' + (new Date(user.created_at)).toLocaleString()
         + (user.description ? '<div class="userdescription">' + emoji.replace_unified(user.description) +'</div>': '<br/>'))
-        .append($('<a class="button">' + (user.is_following ? 'unfollow' : 'follow') + '</a>').click(function () {
+        .append($('<a class="button' + (user.is_following ? ' following' : '') + '">' + (user.is_following ? 'unfollow' : 'follow') + '</a>').click(function () {
             var el = this;
             Api(el.innerHTML, { // follow or unfollow
                 user_id: user.id
             }, function (r) {
-                if (r.success)
-                    el.innerHTML = el.innerHTML == 'follow' ? 'unfollow' : 'follow';
+                if (r.success) {
+                    if (el.innerHTML == 'follow') {
+                        el.innerHTML = 'unfollow';
+                        $(el).addClass('following');
+                    } else {
+                        el.innerHTML = 'follow';
+                        $(el).removeClass('following');
+                    }
+                }
             })
         }))
         .append($('<a class="button">' + (user.is_blocked ? 'unblock' : 'block') + '</a>').click(function () {
