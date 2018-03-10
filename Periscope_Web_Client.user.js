@@ -28,6 +28,7 @@
 // @resource    CSS style.css
 // ==/UserScript==
 
+var selectedDownloadList = localStorage.getItem('SelectedUsersDownloadList') || "";
 var emoji = new EmojiConvertor();
 if (typeof GM_xmlhttpRequest === 'undefined' && typeof GM !== 'undefined') {
     // Greasemonkey 4+
@@ -267,6 +268,8 @@ var Notifications = {
                                 else if (settings.sharedDownload && new_list[i].share_user_ids)
                                     downloadBroadcast = true;
                                 else if (settings.followingDownload && !new_list[i].share_user_ids)
+                                    downloadBroadcast = true;
+                                else if (settings.selectedDownload && selectedDownloadList.includes(new_list[i].user_id))
                                     downloadBroadcast = true;
 
                                 if (downloadBroadcast) {
@@ -1453,6 +1456,9 @@ Edit: function () {
         var download_shared = $('<label><input type="checkbox" style="margin-left: 1.5em;"' + (settings.sharedDownload ? 'checked' : '') + '/> Shared broadcasts</label>').click(function (e) {
             setSet('sharedDownload', e.target.checked);
         });
+        var download_Selected = $('<label><input type="checkbox" style="margin-left: 1.5em;"' + (settings.selectedDownload ? 'checked' : '') + '/> Selected users broadcasts</label>').click(function (e) {
+            setSet('selectedDownload', e.target.checked);
+        });
         var current_download_path = $('<dt style="margin-right: 10px;">' + settings.downloadPath + '</dt>');
         var download_path = $('<dt/>').append($('<input type="file" webkitdirectory directory/>').change(function () {
             setSet('downloadPath', $(this).val());
@@ -1481,7 +1487,8 @@ Edit: function () {
         autoDownload, '<br>',
         download_private, '<br>',
         download_following, '<br>',
-        download_shared, '<br><br>',
+        download_shared, '<br>',
+        download_Selected, '<br><br>',
         'Notifications refresh interval: ', notifications_interval ,' seconds','<br/><br/>',
         (NODEJS ? ['<dt>Downloads path:</dt>', current_download_path, download_path, '<br/><br/>',
                    '<dt>Download format:</dt>', download_format] : '')
@@ -1825,7 +1832,7 @@ function getUserDescription(user) {
         .append($('<div class="username">' + verified_icon + emoji.replace_unified(user.display_name) + ' (@' + user.username + ')</div>').click(switchSection.bind(null, 'User', user.id)))
         .append('Created: ' + (new Date(user.created_at)).toLocaleString()
         + (user.description ? '<div class="userdescription">' + emoji.replace_unified(user.description) +'</div>': '<br/>'))
-        .append($('<a class="button' + (user.is_following ? ' following' : '') + '">' + (user.is_following ? 'unfollow' : 'follow') + '</a>').click(function () {
+        .append($('<a class="button' + (user.is_following ? ' activated' : '') + '">' + (user.is_following ? 'unfollow' : 'follow') + '</a>').click(function () {
             var el = this;
             Api(el.innerHTML, { // follow or unfollow
                 user_id: user.id
@@ -1833,10 +1840,10 @@ function getUserDescription(user) {
                 if (r.success) {
                     if (el.innerHTML == 'follow') {
                         el.innerHTML = 'unfollow';
-                        $(el).addClass('following');
+                        $(el).addClass('activated');
                     } else {
                         el.innerHTML = 'follow';
-                        $(el).removeClass('following');
+                        $(el).removeClass('activated');
                     }
                 }
             })
@@ -1849,6 +1856,28 @@ function getUserDescription(user) {
                 if (r.success)
                     el.innerHTML = el.innerHTML == 'block' ? 'unblock' : 'block';
             })
+        }))
+        .append($('<a class="button' + (selectedDownloadList.includes(user.id) ? ' activated' : '') + '">' + (selectedDownloadList.includes(user.id) ? 'selected' : 'select') + '</a>').click(function () {
+            var el = this;
+            if (el.innerHTML == 'select') {
+                el.innerHTML = 'selected';
+                $(el).addClass('activated');
+            } else {
+                el.innerHTML = 'select';
+                $(el).removeClass('activated');
+            }
+
+            var isStoredAt = selectedDownloadList.indexOf(user.id)
+            if (isStoredAt === 0){
+                selectedDownloadList="";
+                localStorage.setItem(('SelectedUsersDownloadList'), selectedDownloadList)
+            }else if (isStoredAt > 0) {
+                selectedDownloadList = selectedDownloadList.substr(0, isStoredAt - 1) + selectedDownloadList.substr(isStoredAt + user.id.length)
+                localStorage.setItem(('SelectedUsersDownloadList'), selectedDownloadList)
+            } else {
+                selectedDownloadList += user.id + ','
+                localStorage.setItem(('SelectedUsersDownloadList'), selectedDownloadList)
+            }    
         }))
         .append('<div style="clear:both"/>');
 }
