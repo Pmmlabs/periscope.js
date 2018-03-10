@@ -588,11 +588,11 @@ img.lock {
     margin: 0;
 }
 
-.button.following {
+.button.activated {
     background-color: #126E65;
 }
 
-.button.following:hover {
+.button.activated:hover {
     background-color: #06988A;
 }
 
