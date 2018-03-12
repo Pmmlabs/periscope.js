@@ -37,6 +37,7 @@ if (typeof GM_xmlhttpRequest === 'undefined' && typeof GM !== 'undefined') {
 NODEJS = typeof GM_xmlhttpRequest === 'undefined';
 var IMG_PATH = 'https://raw.githubusercontent.com/Pmmlabs/OpenPeriscope/master';
 var settings = JSON.parse(localStorage.getItem('settings')) || {};
+var selectedDownloadList = localStorage.getItem('selectedUsersDownloadList') || "";
 if (NODEJS) {  // for NW.js
     var gui = require('nw.gui');
     gui.App.addOriginAccessWhitelistEntry('https://api.twitter.com/', 'app', 'openperiscope', true);    // allow redirect to app://
@@ -267,6 +268,8 @@ var Notifications = {
                                 else if (settings.sharedDownload && new_list[i].share_user_ids)
                                     downloadBroadcast = true;
                                 else if (settings.followingDownload && !new_list[i].share_user_ids)
+                                    downloadBroadcast = true;
+                                else if (settings.selectedDownload && selectedDownloadList.includes(new_list[i].user_id))
                                     downloadBroadcast = true;
 
                                 if (downloadBroadcast) {
@@ -1453,6 +1456,9 @@ Edit: function () {
         var download_shared = $('<label><input type="checkbox" style="margin-left: 1.5em;"' + (settings.sharedDownload ? 'checked' : '') + '/> Shared broadcasts</label>').click(function (e) {
             setSet('sharedDownload', e.target.checked);
         });
+        var download_Selected = $('<label><input type="checkbox" style="margin-left: 1.5em;"' + (settings.selectedDownload ? 'checked' : '') + '/> Selected users broadcasts</label>').click(function (e) {
+            setSet('selectedDownload', e.target.checked);
+        });
         var current_download_path = $('<dt style="margin-right: 10px;">' + settings.downloadPath + '</dt>');
         var download_path = $('<dt/>').append($('<input type="file" webkitdirectory directory/>').change(function () {
             setSet('downloadPath', $(this).val());
@@ -1481,7 +1487,8 @@ Edit: function () {
         autoDownload, '<br>',
         download_private, '<br>',
         download_following, '<br>',
-        download_shared, '<br><br>',
+        download_shared, '<br>',
+        download_Selected, '<br><br>',
         'Notifications refresh interval: ', notifications_interval ,' seconds','<br/><br/>',
         (NODEJS ? ['<dt>Downloads path:</dt>', current_download_path, download_path, '<br/><br/>',
                    '<dt>Download format:</dt>', download_format] : '')
@@ -1826,18 +1833,20 @@ function getUserDescription(user) {
         .append($('<div class="username">' + verified_icon + emoji.replace_unified(user.display_name) + ' (@' + user.username + ')</div>').click(switchSection.bind(null, 'User', user.id)))
         .append('Created: ' + (new Date(user.created_at)).toLocaleString()
         + (user.description ? '<div class="userdescription">' + emoji.replace_unified(user.description) +'</div>': '<br/>'))
-        .append($('<a class="button' + (user.is_following ? ' following' : '') + '">' + (user.is_following ? 'unfollow' : 'follow') + '</a>').click(function () {
+        .append($('<a class="button' + (user.is_following ? ' activated' : '') + '">' + (user.is_following ? 'unfollow' : 'follow') + '</a>').click(function () {
             var el = this;
+            var selectButton=$(el).next().next()
             Api(el.innerHTML, { // follow or unfollow
                 user_id: user.id
             }, function (r) {
                 if (r.success) {
                     if (el.innerHTML == 'follow') {
                         el.innerHTML = 'unfollow';
-                        $(el).addClass('following');
+                        $(el).addClass('activated');
                     } else {
                         el.innerHTML = 'follow';
-                        $(el).removeClass('following');
+                        $(el).removeClass('activated');
+                        selectButton.text() == '-' ? selectButton.click() : '';
                     }
                 }
             })
@@ -1850,6 +1859,30 @@ function getUserDescription(user) {
                 if (r.success)
                     el.innerHTML = el.innerHTML == 'block' ? 'unblock' : 'block';
             })
+        }))
+        .append($('<a class="button' + (selectedDownloadList.includes(user.id) ? ' activated' : '') + '" title="Select/Deselect User">' + (selectedDownloadList.includes(user.id) ? '-' : '+') + '</a>').click(function () {
+            var el = this;
+            var followButton=$(el).prev().prev()
+            if (el.innerHTML == '+') {
+                el.innerHTML = '-';
+                $(el).addClass('activated');
+                followButton.text() == 'follow' ? followButton.click() : '';
+            } else {
+                el.innerHTML = '+';
+                $(el).removeClass('activated');
+            }
+
+            var isStoredAt = selectedDownloadList.indexOf(user.id)
+            if (isStoredAt === 0){
+                selectedDownloadList="";
+                localStorage.setItem(('selectedUsersDownloadList'), selectedDownloadList)
+            }else if (isStoredAt > 0) {
+                selectedDownloadList = selectedDownloadList.substr(0, isStoredAt - 1) + selectedDownloadList.substr(isStoredAt + user.id.length)
+                localStorage.setItem(('selectedUsersDownloadList'), selectedDownloadList)
+            } else {
+                selectedDownloadList += user.id + ','
+                localStorage.setItem(('selectedUsersDownloadList'), selectedDownloadList)
+            }    
         }))
         .append('<div style="clear:both"/>');
 }
