@@ -28,7 +28,6 @@
 // @resource    CSS style.css
 // ==/UserScript==
 
-var selectedDownloadList = localStorage.getItem('SelectedUsersDownloadList') || "";
 var emoji = new EmojiConvertor();
 if (typeof GM_xmlhttpRequest === 'undefined' && typeof GM !== 'undefined') {
     // Greasemonkey 4+
@@ -38,6 +37,7 @@ if (typeof GM_xmlhttpRequest === 'undefined' && typeof GM !== 'undefined') {
 NODEJS = typeof GM_xmlhttpRequest === 'undefined';
 var IMG_PATH = 'https://raw.githubusercontent.com/Pmmlabs/OpenPeriscope/master';
 var settings = JSON.parse(localStorage.getItem('settings')) || {};
+var selectedDownloadList = localStorage.getItem('selectedUsersDownloadList') || "";
 if (NODEJS) {  // for NW.js
     var gui = require('nw.gui');
     gui.App.addOriginAccessWhitelistEntry('https://api.twitter.com/', 'app', 'openperiscope', true);    // allow redirect to app://
@@ -1834,6 +1834,7 @@ function getUserDescription(user) {
         + (user.description ? '<div class="userdescription">' + emoji.replace_unified(user.description) +'</div>': '<br/>'))
         .append($('<a class="button' + (user.is_following ? ' activated' : '') + '">' + (user.is_following ? 'unfollow' : 'follow') + '</a>').click(function () {
             var el = this;
+            var selectButton=$(el).next().next()
             Api(el.innerHTML, { // follow or unfollow
                 user_id: user.id
             }, function (r) {
@@ -1844,6 +1845,7 @@ function getUserDescription(user) {
                     } else {
                         el.innerHTML = 'follow';
                         $(el).removeClass('activated');
+                        selectButton.text() == '-' ? selectButton.click() : '';
                     }
                 }
             })
@@ -1857,26 +1859,28 @@ function getUserDescription(user) {
                     el.innerHTML = el.innerHTML == 'block' ? 'unblock' : 'block';
             })
         }))
-        .append($('<a class="button' + (selectedDownloadList.includes(user.id) ? ' activated' : '') + '">' + (selectedDownloadList.includes(user.id) ? 'selected' : 'select') + '</a>').click(function () {
+        .append($('<a class="button' + (selectedDownloadList.includes(user.id) ? ' activated' : '') + '" title="Select/Deselect User">' + (selectedDownloadList.includes(user.id) ? '-' : '+') + '</a>').click(function () {
             var el = this;
-            if (el.innerHTML == 'select') {
-                el.innerHTML = 'selected';
+            var followButton=$(el).prev().prev()
+            if (el.innerHTML == '+') {
+                el.innerHTML = '-';
                 $(el).addClass('activated');
+                followButton.text() == 'follow' ? followButton.click() : '';
             } else {
-                el.innerHTML = 'select';
+                el.innerHTML = '+';
                 $(el).removeClass('activated');
             }
 
             var isStoredAt = selectedDownloadList.indexOf(user.id)
             if (isStoredAt === 0){
                 selectedDownloadList="";
-                localStorage.setItem(('SelectedUsersDownloadList'), selectedDownloadList)
+                localStorage.setItem(('selectedUsersDownloadList'), selectedDownloadList)
             }else if (isStoredAt > 0) {
                 selectedDownloadList = selectedDownloadList.substr(0, isStoredAt - 1) + selectedDownloadList.substr(isStoredAt + user.id.length)
-                localStorage.setItem(('SelectedUsersDownloadList'), selectedDownloadList)
+                localStorage.setItem(('selectedUsersDownloadList'), selectedDownloadList)
             } else {
                 selectedDownloadList += user.id + ','
-                localStorage.setItem(('SelectedUsersDownloadList'), selectedDownloadList)
+                localStorage.setItem(('selectedUsersDownloadList'), selectedDownloadList)
             }    
         }))
         .append('<div style="clear:both"/>');
