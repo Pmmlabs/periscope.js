@@ -37,6 +37,7 @@ if (typeof GM_xmlhttpRequest === 'undefined' && typeof GM !== 'undefined') {
 NODEJS = typeof GM_xmlhttpRequest === 'undefined';
 var IMG_PATH = 'https://raw.githubusercontent.com/Pmmlabs/OpenPeriscope/master';
 var settings = JSON.parse(localStorage.getItem('settings')) || {};
+var ScrollPositions={};
 if (NODEJS) {  // for NW.js
     var gui = require('nw.gui');
     gui.App.addOriginAccessWhitelistEntry('https://api.twitter.com/', 'app', 'openperiscope', true);    // allow redirect to app://
@@ -296,6 +297,7 @@ var Notifications = {
     }
 };
 function switchSection(section, param, popstate) {
+    ScrollPositions[document.URL.split('/')[3]]=document.body.scrollTop
     // Switch menu
     $('.menu.active').removeClass('active');
     $('#menu'+section).addClass('active');
@@ -349,6 +351,9 @@ function switchSection(section, param, popstate) {
                 break;
         }
     document.title = section + ' - ' + 'OpenPeriscope';
+    if (ScrollPositions.hasOwnProperty(section)) {
+        window.scrollTo(0, ScrollPositions[section]);
+    }
 }
 var Progress = {
     elem: $('<div id="progress"/>'),
