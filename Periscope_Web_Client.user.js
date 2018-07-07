@@ -29,6 +29,7 @@
 // ==/UserScript==
 
 var emoji = new EmojiConvertor();
+var childProcesses=[]; //list of video downloading processes
 NODEJS = typeof GM_xmlhttpRequest === 'undefined';
 var IMG_PATH = 'https://raw.githubusercontent.com/Pmmlabs/OpenPeriscope/master';
 var settings = JSON.parse(localStorage.getItem('settings')) || {};
@@ -186,6 +187,7 @@ function Ready(loginInfo) {
         {text: 'User', id: 'User'}
     ];
     if (NODEJS)
+        menu.push({text: 'Download manager', id: 'Dmanager'});
         menu.push({text: 'Downloading', id: 'Console'});
     for (var i in menu) {
         var link = $('<div class="menu" id="menu'+menu[i].id+'">' + menu[i].text + '</div>');
@@ -264,14 +266,14 @@ var Notifications = {
                                     downloadBroadcast = true;
 
                                 if (downloadBroadcast) {
-                                    getURL(new_list[i].id, function (live, replay, cookies, _name, _user_id, _user_name) {
+                                    getURL(new_list[i].id, function (live, replay, cookies, _name, _user_id, _user_name, _whole_response) {
                                         var ffmpeg_cookies = [];
                                         for (var i in cookies)
                                             ffmpeg_cookies.push(cookies[i].Name + '=' + cookies[i].Value);
                                         if (live)
-                                            download(_name, live, ffmpeg_cookies, _user_id, _user_name);
+                                            download(_name, live, ffmpeg_cookies, _user_id, _user_name, _whole_response);
                                         else if (replay)
-                                            download(_name, replay, ffmpeg_cookies, _user_id, _user_name);
+                                            download(_name, replay, ffmpeg_cookies, _user_id, _user_name, _whole_response);
                                     });
                                 }
                             }
@@ -330,7 +332,8 @@ function switchSection(section, param, popstate) {
                     cookies: '',
                     name:'',
                     user_id:'',
-                    user_name:''
+                    user_name:'',
+                    whole_response:''
                 }, param);
                 if ($('#download_url').val() != param.url) {    // if it other video
                     $('#download_url').val(param.url);
@@ -338,6 +341,7 @@ function switchSection(section, param, popstate) {
                     $('#download_name').val(param.name);
                     $('#download_userid').val(param.user_id);
                     $('#download_username').val(param.user_name);
+                    $('#download_response').val(JSON.stringify(param.whole_response));
                     $('#download').click();
                 }
                 break;
@@ -1481,21 +1485,28 @@ Edit: function () {
                    '<dt>Download format:</dt>', download_format] : '')
     ));
 },
+Dmanager: function () {
+    var result = $('<div/>');
+    var refreshButton =  $('<a class="button">Refresh</a>').click(function () {dManagerDescription(result)});
+    var removefinished = $('<a class="button">Remove Finished</a>').click(function () {
+        if (childProcesses && childProcesses.length){
+            childProcesses=childProcesses.filter(function(proc){
+              return  proc.exitCode === null;
+            })
+            refreshButton.click();
+        }
+    });
+    $('#right').append($('<div id="Dmanager"/>').append(refreshButton, removefinished, result));
+    refreshButton.click();
+},
 Console: function () {
     var resultConsole = $('<pre id="resultConsole" />');
     var downloadButton = $('<a class="button" id="download">Download</a>').click(function () {
         resultConsole.empty();
-        var dl = download($('#download_name').val().trim(), $('#download_url').val().trim(), $('#download_cookies').val().trim().split('&'), $('#download_userid').val().trim(), $('#download_username').val().trim(), resultConsole);
-        stopButton.show().unbind('click').click(function () {
-            try {
-                dl.stdin.end('q', dl.kill);
-            } finally {
-                $(this).hide();
-                $('#download_userid').val(null);
-                $('#download_username').val(null);
-                downloadButton.show();
-            }
-        });
+        var dl = download($('#download_name').val().trim(), $('#download_url').val().trim(), $('#download_cookies').val().trim().split('&'), $('#download_userid').val().trim(), $('#download_username').val().trim(), JSON.parse($('#download_response').val().trim() || '""'), resultConsole);
+        $('#download_userid').val(null);
+        $('#download_username').val(null);
+        $('#download_response').val(null);
         var gui = require('nw.gui');
         gui.Window.get().removeAllListeners('close').on('close', function(){
             try {
@@ -1504,15 +1515,15 @@ Console: function () {
                 gui.App.quit();
             }
         });
-        $(this).hide();
     });
-    var stopButton = $('<a class="button">Stop</a>').hide();
+
     $('#right').append($('<div id="Console"/>').append('<dt>URL:</dt><input id="download_url" type="text" size="45"><br/>' +
                                                        '<dt>Cookies:</dt><input id="download_cookies" type="text" size="45"><br/>' +
                                                        '<dt>Name:</dt><input id="download_name" type="text" size="45"><br/>' +
                                                        '<input id="download_userid" type="hidden">' +
+                                                       '<input id="download_response" type="hidden">' +
                                                        '<input id="download_username" type="hidden">',
-                                                        downloadButton, stopButton, '<br/><br/>', resultConsole));
+                                                        downloadButton, '<br/><br/>', resultConsole));
 }
 };
 var chat_interval;
@@ -1573,7 +1584,7 @@ function refreshList(jcontainer, title) {  // use it as callback arg
 }
 function getM3U(id, jcontainer) {
     jcontainer.find('.links').empty();
-    getURL(id, function (hls_url, replay_url, cookies, _name, _user_id, _user_name) {
+    getURL(id, function (hls_url, replay_url, cookies, _name, _user_id, _user_name, _whole_response) {
         var params = '';
         var ffmpeg_cookies = '';
         if (cookies && cookies.length) {
@@ -1586,7 +1597,7 @@ function getM3U(id, jcontainer) {
         if (hls_url) {
             var clipboardLink = $('<a data-clipboard-text="' + hls_url + '">Copy URL</a>');
             jcontainer.find('.links').append('<a href="' + hls_url + '">Live M3U link</a>',
-                NODEJS ? [' | ', $('<a>Download</a>').click(switchSection.bind(null, 'Console', {url: hls_url, cookies: ffmpeg_cookies, name: _name, user_id: _user_id, user_name: _user_name}))] : '',
+            NODEJS ? [' | ', $('<a>Download</a>').click(switchSection.bind(null, 'Console', {url: hls_url, cookies: ffmpeg_cookies, name: _name, user_id: _user_id, user_name: _user_name, whole_response: _whole_response}))] : '',
                 ' | ', clipboardLink);
             new ClipboardJS(clipboardLink.get(0));
         }
@@ -1604,7 +1615,7 @@ function getM3U(id, jcontainer) {
                     var link = $('<a href="data:text/plain;charset=utf-8,' + encodeURIComponent(m3u_text) + '" download="' + filename + '">Download replay M3U</a>').click(saveAs.bind(null, m3u_text, filename));
                     var clipboardLink = $('<a data-clipboard-text="' + replay_url + '">Copy URL</a>');
                     jcontainer.find('.links').append(link,
-                        NODEJS ? [' | ', $('<a>Download</a>').click(switchSection.bind(null, 'Console', {url: replay_url, cookies: ffmpeg_cookies, name: _name, user_id: _user_id, user_name: _user_name}))] : '',
+                        NODEJS ? [' | ', $('<a>Download</a>').click(switchSection.bind(null, 'Console', {url: replay_url, cookies: ffmpeg_cookies, name: _name, user_id: _user_id, user_name: _user_name, whole_response: _whole_response}))] : '',
                         ' | ', clipboardLink);
                     new ClipboardJS(clipboardLink.get(0));
                 }
@@ -1635,12 +1646,12 @@ function getURL(id, callback){
         // For live
         var hls_url = r.hls_url || r.https_hls_url || r.lhls_url;
         if (hls_url) {
-            callback(hls_url, null, r.cookies, name, r.broadcast.user_id, r.broadcast.username);
+            callback(hls_url, null, r.cookies, name, r.broadcast.user_id, r.broadcast.username, r.broadcast);
         }
         // For replay
         var replay_url = r.replay_url;
         if (replay_url) {
-            callback(null, replay_url, r.cookies, name, r.broadcast.user_id, r.broadcast.username);
+            callback(null, replay_url, r.cookies, name, r.broadcast.user_id, r.broadcast.username, r.broadcast);
         }
     };
     Api('accessVideoPublic', {
@@ -1651,7 +1662,7 @@ function getURL(id, callback){
         }, getURLCallback)
     });
 }
-function download(name, url, cookies, user_id, user_name, jcontainer) { // cookies=['key=val','key=val']
+function download(name, url, cookies, user_id, user_name, whole_response, jcontainer) { // cookies=['key=val','key=val']
     function _arrayBufferToString(buf, callback) {
         var bb = new Blob([new Uint8Array(buf)]);
         var f = new FileReader();
@@ -1693,6 +1704,13 @@ function download(name, url, cookies, user_id, user_name, jcontainer) { // cooki
         '-y',
         output_dir + name + '.' + (settings.downloadFormat || 'mp4')
     ]);
+    spawn.b_info = whole_response;
+    spawn.folder_path = output_dir;
+    spawn.file_name = name
+    childProcesses.push(spawn);
+    if (childProcesses.length > 50) { //limit this list to last 50 downloads
+        childProcesses.shift()
+    }
     if (jcontainer) {
         if (!spawn.pid)
             jcontainer.append('FFMpeg not found. On Windows, place the static build into OpenPeriscope directory.');
@@ -1846,6 +1864,71 @@ function getUserDescription(user) {
             })
         }))
         .append('<div style="clear:both"/>');
+}
+function dManagerDescription(jcontainer) {
+    jcontainer.html('<div style="clear:both"/>');
+    if (childProcesses.length) {
+        for (var i = childProcesses.length - 1; i >= 0; i--) {
+            (function () { //IIFE to keep each iteration
+                var CProcess = childProcesses[i];
+                var broadcastInfo = CProcess.b_info;
+                var filePath = CProcess.folder_path;
+                var brdcstImage = $('<img src="' + broadcastInfo.image_url_small + '"></img>');
+                var dManager_username = $('<div class="username">' + emoji.replace_unified(broadcastInfo.user_display_name || "undefined") + ' (@' + broadcastInfo.username + ')</div>').click(switchSection.bind(null, 'User', broadcastInfo.id));
+                
+                var brdcstTitle = $('<a class="b_title">' + emoji.replace_unified(broadcastInfo.status || CProcess.file_name) + '<a>').click(function () {
+                    require('fs').stat(filePath, function (err, stats) {
+                        if (err) {} else {
+                            require('child_process').exec('"' + filePath + CProcess.file_name + '.' + (settings.downloadFormat || 'mp4') + '"', function (error, stdout, stderr) {
+                                if (error != null) {}; //open video
+                            });
+                        }
+                    });
+                });
+
+                var stopButton = $('<a class="button right">Stop</a>').click(function () {
+                    try {
+                        CProcess.stdin.end('q', CProcess.kill);
+                    } finally {
+                        $(this).remove();
+                    }
+                });
+
+                var openFolderButton = $('<a class="button right">folder</a>').click(function () {
+                    var self = $(this);
+                    require('fs').stat(filePath, function (err, stats) {
+                        if (err) { // Directory doesn't exist or something.
+                            if (err.code === 'ENOENT') {
+                                self.html("doesn't exist");
+                            } else {
+                                self.html("error");
+                                console.error(err);
+                            }
+                        } else {
+                            require('child_process').exec('start ""' + ' "' + filePath + '"'); //open folder
+                        }
+                    });
+                });
+
+                var downloadCard = $('<div class="card"/>').append( $('<div class="description"></div>').append((CProcess.exitCode === null ? stopButton : ''), openFolderButton,
+                    brdcstImage, brdcstTitle, '<br/>', dManager_username
+                ));
+            
+                jcontainer.append(downloadCard);
+            })()
+        }
+
+        var downloadsCount = $('<span class="downloadingCounter"></a>').append(function () {
+            var addedDownloads = childProcesses.filter(function (x) {
+                return x.exitCode === null;
+            }).length;
+            return addedDownloads + ' in progress, ' + (childProcesses.length - addedDownloads) + ' finished';
+        });
+
+        jcontainer.prepend('<br/>', downloadsCount);
+    } else
+        jcontainer.append('No results');
+    return jcontainer;
 }
 function setSet(key, value) {
     settings[key] = value;
